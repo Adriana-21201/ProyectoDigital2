@@ -1,1 +1,47 @@
+#include <Arduino.h>
+
+//Pines para la lectura del ADC y el botón
+#define pinADC 33 
+#define btnTemp 13
+
+int estadoBtn = 0; //estado inicial del botón
+int estadoFinal = 0; //estado final del botón
+int adcRaw = 0; //valor "crudo" del ADC
+int lecturas = 0; //valor leído del botón
+int estadoPrevio = HIGH; //Estado previo del botón antes de accionarse
+
+unsigned long reboteFinal = 0;
+unsigned long reboteAtrasado = 50; //tiempo de rebote en millis
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(btnTemp, INPUT);
+  digitalWrite(btnTemp, HIGH); //habilita la resistencia pull-up interna del botón 
+  adcRaw = 0; //inicialización de la variable adcRaw
+
+}
+
+void loop() {
+  int leerTemp = digitalRead(btnTemp); //lee el estado del botón
+
+  if (leerTemp != estadoPrevio) {
+    reboteFinal = millis(); //actualiza el tiempo de rebote si el estado inicial cambia
+  }
+
+  if ((millis() - reboteFinal) > reboteAtrasado) {
+    if (leerTemp != lecturas) { //comprobar si el estado del botón cambió
+      lecturas = leerTemp; //actualiza el valor de la temperatura por cada rebote
+      if (lecturas == LOW) {
+        //se escogen valores aleatorios entre -20 y 120 grados °C para la temperatura
+        float temp = random(-20, 121);
+        Serial.print("Temperatura: "); //muestra la temperatura leída 
+        Serial.print(temp);
+        Serial.println(" °C"); //sistema en Celsius
+      }
+    }
+  }
+
+  estadoPrevio = leerTemp;
+}
+
 
