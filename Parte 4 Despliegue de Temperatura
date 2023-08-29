@@ -9,7 +9,6 @@
 #define pinADC 33 
 #define btnTemp 13
 //Canales para los leds y pwm
-#define pwmChannel 0
 #define RedChannel 1
 #define GreenChannel 2
 #define YellowChannel 3
@@ -52,6 +51,7 @@ int display; //variable booleana para el funcionamiento de los displays
 
 const int servoPin = 18;
 
+void configurarPWM(void);
 void displayConfig(void);
 void showTemp(int display);
 
@@ -170,7 +170,7 @@ void loop() {
   digitalWrite(digitD1, LOW);
   digitalWrite(digitD2, HIGH);
   showTemp(display);
-  delay(5);
+  delay(20);
 
   }
 
@@ -317,3 +317,5 @@ void showTemp(int display) {
       break;
   }
 }
+
+
