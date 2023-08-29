@@ -1,1 +1,9 @@
+define IO_USERNAME  "Adriana_GP02"
+#define IO_KEY       "aio_rdNZ06fy9pw8z6nqkRuCdzoznixn"
 
+#define WIFI_SSID "WiFi"
+#define WIFI_PASS "passkey"
+
+#include "AdafruitIO_WiFi.h"
+
+AdafruitIO_WiFi io(IO_USERNAME, IO_KEY, WIFI_SSID, WIFI_PASS);
