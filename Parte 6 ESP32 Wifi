@@ -1,5 +1,5 @@
-define IO_USERNAME  "Adriana_GP02"
-#define IO_KEY       "aio_rdNZ06fy9pw8z6nqkRuCdzoznixn"
+define IO_USERNAME  "Username AdaFruit"
+#define IO_KEY       "IO KEY"
 
 #define WIFI_SSID "WiFi"
 #define WIFI_PASS "passkey"
