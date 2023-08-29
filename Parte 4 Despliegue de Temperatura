@@ -30,11 +30,30 @@ int ciclo1 = 0;
 int ciclo2 = 0;
 int ciclo3 = 0;
 int rotacion = 0;
+int ten = 0;
+int unit = 0;
+int decimal = 0;
+int display; //variable booleana para el funcionamiento de los displays
 
-const int segmentPins[] = {2, 4, 15, 5, 19, 12, 14, 27};
-const int digitPins[] = {34, 35, 32};
+//Pines de los display
+#define segA 2
+#define segB 4
+#define segC 15
+#define segD 5
+#define segE 39
+#define segPunto 12
+#define segF 14
+#define segG 27
+
+//Pines de los comunes
+#define digitD0 34
+#define digitD1 35
+#define digitD2 32
 
 const int servoPin = 18;
+
+void displayConfig(void);
+void showTemp(int display);
 
 ledc_channel_config_t channel_config[3];
 ledc_channel_config_t servo_channel_config;
@@ -42,7 +61,17 @@ ledc_channel_config_t servo_channel_config;
 void setup() {
   Serial.begin(115200);
   pinMode(btnTemp, INPUT);
+  pinMode(digitD0, OUTPUT);
+  pinMode(digitD1, OUTPUT);
+  pinMode(digitD2, OUTPUT);
+
+  digitalWrite(digitD0, LOW);
+  digitalWrite(digitD0, LOW);
+  digitalWrite(digitD0, LOW);
+
+  pinMode(btnTemp, INPUT);
   configurarPWM();
+  displayConfig();
 
   digitalWrite(ledRojo, LOW);
   digitalWrite(ledVerde, LOW);
@@ -66,20 +95,12 @@ void setup() {
   timer_config.freq_hz = 80;
   ledc_timer_config(&timer_config);
 
-  for(int i = 0; i < 8; i++) {
-    pinMode(segmentPins[i], OUTPUT);
-  }
-
-  for(int i = 0; i < 3; i++) {
-    pinMode(digitPins[i], OUTPUT);
-
-  }
 }
 
 void loop() {
   int adcVal = analogRead(PIN_LM35); //Lectura del sensor de temperatura
   float milliVolt = adcVal * (ADC_VREF_mV / ADC_RESOLUTION);
-  float temp = milliVolt / 10; //Convierte el voltaje a temperatura
+  float temp = milliVolt / 5; //Convierte el voltaje a temperatura
 
   int leerTemp = digitalRead(btnTemp); //lee el estado del botón
   if (leerTemp == LOW && estadoFinal == HIGH) {
@@ -87,21 +108,21 @@ void loop() {
 
     float voltaje = adcRaw * (5.0 / 4095);
 
-    float tempF = temp * 9 / 5 + 32; //Conversión de la temperatura en °F
+    int temperatura = temp * 10;
+    
+    ten = temperatura / 100;
+
+    temperatura = temperatura - (ten*100);
+
+    unit = temperatura / 10;
+    
+    temperatura = temperatura - (unit*10);
+
+    decimal = temperatura;
 
     Serial.print("Temperatura: "); //muestra la temperatura leída 
     Serial.print(temp);
     Serial.println(" °C"); //sistema en Celsius
-    Serial.print(" ~ ");
-    Serial.print(tempF);
-    Serial.print(" °F");
-
-    int integrado = int(temp); //Se refiere a los valores que se desean mostrar en el display
-    int decimal = int((temp - integrado) * 10);
-
-    displayDigit(0, integrado | (1 << 7));
-    displayDigit(1, decimal);
-    displayDigit(2, 0);
 
     //Mapeo de la temperatura a los valores PWM para los leds
     if (temp <= 37.0) {
@@ -129,6 +150,28 @@ void loop() {
       ledcWrite(YellowChannel, ciclo3);
       rotacion = 90;
   } 
+
+  display = ten;
+  digitalWrite(digitD0, HIGH);
+  digitalWrite(digitD1, LOW);
+  digitalWrite(digitD2, LOW);
+  showTemp(display);
+  delay(5);
+
+  display = unit;
+  digitalWrite(digitD0, LOW);
+  digitalWrite(digitD1, HIGH);
+  digitalWrite(digitD2, LOW);
+  showTemp(display);
+  delay(5);
+
+  display = decimal;
+  digitalWrite(digitD0, LOW);
+  digitalWrite(digitD1, LOW);
+  digitalWrite(digitD2, HIGH);
+  showTemp(display);
+  delay(5);
+
   }
 
   int pulseWidth = map(rotacion, 0, 180, 1000, 2000);
@@ -151,13 +194,126 @@ ledcAttachPin(ledVerde, GreenChannel);
 ledcAttachPin(ledAmarillo, YellowChannel);
 }
 
-void displayDigit(int digit, int value) {
-    digitalWrite(digitPins[digit], LOW);
-    for(int i = 0; i < 8; i++) {
-      digitalWrite(segmentPins[i], value & (1 << i));
-    }
-    delayMicroseconds(2000);
-    digitalWrite(digitPins[digit], HIGH);
+void displayConfig(void) {
+pinMode(segA, OUTPUT);
+pinMode(segB, OUTPUT);
+pinMode(segC, OUTPUT);
+pinMode(segD, OUTPUT);
+pinMode(segE, OUTPUT);
+pinMode(segF, OUTPUT);
+pinMode(segG, OUTPUT);
+
+digitalWrite(segA, LOW);
+digitalWrite(segB, LOW);
+digitalWrite(segC, LOW);
+digitalWrite(segD, LOW);
+digitalWrite(segE, LOW);
+digitalWrite(segF, LOW);
+digitalWrite(segG, LOW);
+
+}
+
+void showTemp(int display) {
+  switch(display) {
+    case 1: 
+      digitalWrite(segA, HIGH);
+      digitalWrite(segB, HIGH);
+      digitalWrite(segC, HIGH);
+      digitalWrite(segD, HIGH);
+      digitalWrite(segE, HIGH);
+      digitalWrite(segF, HIGH);
+      digitalWrite(segG, LOW);
+      digitalWrite(segPunto, HIGH);
+      break;
+    case 2:
+      digitalWrite(segA, LOW);
+      digitalWrite(segB, HIGH);
+      digitalWrite(segC, HIGH);
+      digitalWrite(segD, LOW);
+      digitalWrite(segE, LOW);
+      digitalWrite(segF, LOW);
+      digitalWrite(segG, LOW);
+      digitalWrite(segPunto, HIGH);
+      break;
+    case 3:
+      digitalWrite(segA, HIGH);
+      digitalWrite(segB, HIGH);
+      digitalWrite(segC, LOW);
+      digitalWrite(segD, HIGH);
+      digitalWrite(segE, HIGH);
+      digitalWrite(segF, LOW);
+      digitalWrite(segG, HIGH);
+      digitalWrite(segPunto, HIGH);
+      break;
+    case 4:
+      digitalWrite(segA, HIGH);
+      digitalWrite(segB, HIGH);
+      digitalWrite(segC, HIGH);
+      digitalWrite(segD, HIGH);
+      digitalWrite(segE, LOW);
+      digitalWrite(segF, LOW);
+      digitalWrite(segG, HIGH);
+      digitalWrite(segPunto, HIGH);
+      break;
+    case 5:
+      digitalWrite(segA, LOW);
+      digitalWrite(segB, HIGH);
+      digitalWrite(segC, HIGH);
+      digitalWrite(segD, LOW);
+      digitalWrite(segE, LOW);
+      digitalWrite(segF, HIGH);
+      digitalWrite(segG, HIGH);
+      digitalWrite(segPunto, HIGH);
+      break;
+    case 6:
+      digitalWrite(segA, HIGH);
+      digitalWrite(segB, LOW);
+      digitalWrite(segC, HIGH);
+      digitalWrite(segD, HIGH);
+      digitalWrite(segE, LOW);
+      digitalWrite(segF, HIGH);
+      digitalWrite(segG, HIGH);
+      digitalWrite(segPunto, HIGH);
+      break;
+    case 7:
+      digitalWrite(segA, HIGH);
+      digitalWrite(segB, LOW);
+      digitalWrite(segC, HIGH);
+      digitalWrite(segD, HIGH);
+      digitalWrite(segE, HIGH);
+      digitalWrite(segF, HIGH);
+      digitalWrite(segG, HIGH);
+      digitalWrite(segPunto, HIGH);
+      break;
+    case 8:
+      digitalWrite(segA, HIGH);
+      digitalWrite(segB, HIGH);
+      digitalWrite(segC, HIGH);
+      digitalWrite(segD, LOW);
+      digitalWrite(segE, LOW);
+      digitalWrite(segF, LOW);
+      digitalWrite(segG, LOW);
+      digitalWrite(segPunto, HIGH);
+      break;
+    case 9:
+      digitalWrite(segA, HIGH);
+      digitalWrite(segB, HIGH);
+      digitalWrite(segC, HIGH);
+      digitalWrite(segD, HIGH);
+      digitalWrite(segE, HIGH);
+      digitalWrite(segF, HIGH);
+      digitalWrite(segG, HIGH);
+      digitalWrite(segPunto, HIGH);
+      break;
+    case 10:
+      digitalWrite(segA, HIGH);
+      digitalWrite(segB, HIGH);
+      digitalWrite(segC, HIGH);
+      digitalWrite(segD, LOW);
+      digitalWrite(segE, LOW);
+      digitalWrite(segF, HIGH);
+      digitalWrite(segG, HIGH);
+      digitalWrite(segPunto, HIGH);
+      break;
   }
-
-
+}
