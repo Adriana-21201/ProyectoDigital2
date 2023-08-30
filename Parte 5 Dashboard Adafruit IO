@@ -1,7 +1,13 @@
+//Universidad del Valle de Guatemala
+//Electrónica Digital 2
+//Adriana Girón 21201
+
+//Librerías correspondientes al ESP32, PWM y Adafruit
 #include <Arduino.h>
 #include "driver/ledc.h"
 #include "config.h"
 
+// Voltaje, resolución y pin de salida del sensor de temperatura LM35  
 #define ADC_VREF_mV 3300.0
 #define ADC_RESOLUTION 4096.0
 #define PIN_LM35 36
@@ -12,7 +18,7 @@
 #define RedChannel 1
 #define GreenChannel 2
 #define YellowChannel 3
-//Pines para los led RGB
+//Pines para los leds del semáforo de temperatura
 #define ledVerde 23
 #define ledAmarillo 22
 #define ledRojo 21
@@ -22,6 +28,7 @@
 #define freqPWM2 500
 #define resolution 8
 
+//Variables globales necesarias para el almacenamiento de datos
 int estadoBtn = 0; //estado inicial del botón
 int estadoFinal = 0; //estado final del botón
 int adcRaw = 0; //valor "crudo" del ADC
@@ -34,7 +41,7 @@ int unit = 0;
 int decimal = 0;
 int display; 
 
-//Pines de los display
+//Pines de los display de 7 segmentos
 #define segA 2
 #define segB 4
 #define segC 26
@@ -43,44 +50,53 @@ int display;
 #define segF 14
 #define segG 27
 
-//Pines de los comunes
+//El punto decimal fue colocado directamente a voltaje
+
+//Pines de los transistores de cada display
 #define digitD0 33
 #define digitD1 25
 #define digitD2 32
 
-const int servoPin = 18;
+const int servoPin = 18; //Pin del servomotor
 
+//Creación de las funciones que operan el proyecto
 void configurarPWM(void);
 void displayConfig(void);
 void showTemp(int display);
 
+//Configuración del canal para el servo
 ledc_channel_config_t channel_config[3];
 ledc_channel_config_t servo_channel_config;
 
+//Nombre del feed en AdaFruit, lo colocamos para llamar al servidor
 AdafruitIO_Feed *UVG = io.feed("Proyecto 21201");
 
 void setup() {
-  Serial.begin(115200);
-  pinMode(btnTemp, INPUT);
-  pinMode(digitD0, OUTPUT);
+  Serial.begin(115200); //Velocidad del monitor serial
+  pinMode(btnTemp, INPUT); //El botón se declara como entrada
+  pinMode(digitD0, OUTPUT); //Los transistores son declarados como salidas
   pinMode(digitD1, OUTPUT);
   pinMode(digitD2, OUTPUT);
 
+  //Hace que al enviar la programación los display empiecen apagados
   digitalWrite(digitD0, LOW);
   digitalWrite(digitD0, LOW);
   digitalWrite(digitD0, LOW);
 
-  pinMode(btnTemp, INPUT);
+  //Ejecución de las funciones
   configurarPWM();
   displayConfig();
 
+  //Los leds comienzan apagados antes de que se presione el botón por primera vez
   digitalWrite(ledRojo, LOW);
   digitalWrite(ledVerde, LOW);
   digitalWrite(ledAmarillo, LOW);
 
+  //El servomotor se define como salida
   pinMode(servoPin, OUTPUT);
-  ledcAttachPin(servoPin, LEDC_CHANNEL_4);
+  ledcAttachPin(servoPin, LEDC_CHANNEL_4); //Definición del pin del servo y el canal a utilizar
 
+  //Configuración PWM del servomotor
   servo_channel_config.gpio_num = servoPin;
   servo_channel_config.speed_mode = LEDC_HIGH_SPEED_MODE;
   servo_channel_config.channel = LEDC_CHANNEL_4;
@@ -96,6 +112,7 @@ void setup() {
   timer_config.freq_hz = 50;
   ledc_timer_config(&timer_config);
 
+  //Conexión a AdaFruit del monitor serial
   while(! Serial);
 
   Serial.print("Connecting to Adafruit IO");
@@ -114,11 +131,12 @@ void setup() {
 
 void loop() {
   int leerTemp = digitalRead(btnTemp); //lee el estado del botón
-  if (leerTemp == LOW && estadoFinal == HIGH) {
+  if (leerTemp == LOW && estadoFinal == HIGH) { //Condicional de cuando se presiona el botón
       int adcVal = analogRead(PIN_LM35); //Lectura del sensor de temperatura
-      float milliVolt = adcVal * (ADC_VREF_mV / ADC_RESOLUTION);
-      float temp = milliVolt / 5; //Convierte el voltaje a temperatura
+      float milliVolt = adcVal * (ADC_VREF_mV / ADC_RESOLUTION); //El valor del ADC se convirte a valores de voltaje
+      float temp = milliVolt / 5; //Convierte el voltaje a valores de temperatura
 
+//Ecuaciones necesarias para la conversión del voltaje a temperatura, por cada decena, unidad y decimal
     int temperatura = temp * 10;
     
     ten = temperatura / 100;
@@ -131,20 +149,23 @@ void loop() {
 
     decimal = temperatura;
 
+//Se muestra en el monitor serial
     Serial.print("Temperatura: "); //muestra la temperatura leída 
     Serial.print(temp);
     Serial.println(" °C"); //sistema en Celsius
 
     //Mapeo de la temperatura a los valores PWM para los leds
-    if (temp <= 37.0) {
-      ciclo1 = 0;
-      ciclo2 = 255;
-      ciclo3 = 0;
+    if (temp <= 34.0) {
+//Cuando la temperatura es menor o igual a 34°C se enciende el led verde
+      ciclo1 = 0; //ciclo correspondiente al led rojo
+      ciclo2 = 255; //ciclo correspondiente al led verde
+      ciclo3 = 0; //ciclo correspondiente al led amarillo
       ledcWrite(RedChannel, ciclo1);
       ledcWrite(GreenChannel, ciclo2);
       ledcWrite(YellowChannel, ciclo3);
-      rotacion = map(temp, 30, 37, 0, 180);
-  } else if(temp >= 37.5) {
+      rotacion = map(temp, 30, 37, 0, 180); //El servo rota dependiendo del cambio de la temperatura
+  } else if(temp >= 40) {
+//Cuando la temperatura es mayor o igual a 40°C se enciende el led rojo, los demás se apagan
       ciclo1 = 255;
       ciclo2 = 0;
       ciclo3 = 0;
@@ -152,7 +173,8 @@ void loop() {
       ledcWrite(GreenChannel, ciclo2);
       ledcWrite(YellowChannel, ciclo3);
       rotacion = map(37,5, 40, 180, 0);
-  } else if(temp > 37.0 && temp < 37.5) {
+  } else if(temp > 34 && temp < 40) {
+//Cuando la temperatura se encuentra entre 34° y 40° se enciende el led amarillo. 
       ciclo1 = 0;
       ciclo2 = 0;
       ciclo3 = 255;
@@ -162,6 +184,7 @@ void loop() {
       rotacion = 90;
   } 
 
+//Corre la temperatura y la envía al AdaFruit mediante el WiFi
   io.run();
 
   Serial.print("sending -> ");
@@ -171,6 +194,7 @@ void loop() {
   delay(3000);
 
   }
+  //Configuración del primer display para mostrar el valor de la temperatura en decenas
   display = ten;
   digitalWrite(digitD0, HIGH);
   digitalWrite(digitD1, LOW);
@@ -178,6 +202,7 @@ void loop() {
   showTemp(display);
   delay(5);
 
+  //Configuración del segundo display para mostrar el valor de la temperatura en unidades
   display = unit;
   digitalWrite(digitD0, LOW);
   digitalWrite(digitD1, HIGH);
@@ -185,6 +210,7 @@ void loop() {
   showTemp(display);
   delay(5);
 
+  //Configuración del tercer display para mostrar el valor de la temperatura en decimales
   display = decimal;
   digitalWrite(digitD0, LOW);
   digitalWrite(digitD1, LOW);
@@ -192,20 +218,20 @@ void loop() {
   showTemp(display);
   delay(5);
 
+  //Inician apagados los transistores
   digitalWrite(digitD0, LOW);
   digitalWrite(digitD1, LOW);
   digitalWrite(digitD2, LOW);
   
-  int pulseWidth = map(rotacion, 0, 180, 1000, 2000);
-  ledcWrite(LEDC_CHANNEL_4, pulseWidth);
+  int pulseWidth = map(rotacion, 0, 180, 1000, 2000);   //Máxima y mínima rotación del servo
+  ledcWrite(LEDC_CHANNEL_4, pulseWidth);   //Ancho de banda y canal del servomotor
 
   estadoFinal = leerTemp;
   delay(5);
 }
 
-
-void configurarPWM(void)
-{
+//Ajuste de la frecuencia y brillo de los leds
+void configurarPWM(void) {
 
 ledcSetup(RedChannel, freqPWM, resolution);
 ledcSetup(GreenChannel, freqPWM1, resolution);
@@ -216,6 +242,7 @@ ledcAttachPin(ledVerde, GreenChannel);
 ledcAttachPin(ledAmarillo, YellowChannel);
 }
 
+//Función que corresponde al tipo de salida de los displays
 void displayConfig(void) {
 pinMode(segA, OUTPUT);
 pinMode(segB, OUTPUT);
@@ -225,6 +252,7 @@ pinMode(segE, OUTPUT);
 pinMode(segF, OUTPUT);
 pinMode(segG, OUTPUT);
 
+//Comienzan apagados
 digitalWrite(segA, LOW);
 digitalWrite(segB, LOW);
 digitalWrite(segC, LOW);
@@ -235,6 +263,7 @@ digitalWrite(segG, LOW);
 
 }
 
+//Función que se encarga de encender y apagar los segmentos según las especificaciones
 void showTemp(int display) {
   switch(display) {
     case 1: 
